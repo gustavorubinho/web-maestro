@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maestro VR: Dies Irae</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: #0b0705;
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #stage-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      cursor: none; /* A Batuta substitui o cursor */
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Top Bar HUD */
+    .top-bar-hud {
+      position: absolute;
+      top: 15px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 40px;
+      pointer-events: none;
+      z-index: 25;
+    }
+
+    .song-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(20, 14, 10, 0.9);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      padding: 6px 18px;
+      border-radius: 20px;
+    }
+
+    .song-name {
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #ff3b30;
+      letter-spacing: 1px;
+    }
+
+    .song-composer {
+      font-size: 0.75rem;
+      color: #d1c5a5;
+      font-weight: 600;
+    }
+
+    .audio-badge {
+      font-size: 0.72rem;
+      color: #30d158;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .top-controls {
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .btn-top {
+      background: rgba(20, 14, 10, 0.90);
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      color: #f5eedb;
+      padding: 7px 16px;
+      border-radius: 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-top:hover {
+      background: rgba(212, 175, 55, 0.3);
+      border-color: #ffd700;
+      color: #ffd700;
+      transform: translateY(-1px);
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(18, 12, 8, 0.96) 0%, rgba(5, 3, 2, 0.99) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      cursor: default;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal-card {
+      background: rgba(30, 20, 15, 0.96);
+      border: 2px solid rgba(212, 175, 55, 0.6);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9);
+      border-radius: 20px;
+      padding: 35px 45px;
+      max-width: 680px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .modal-title {
+      font-family: 'Cinzel', serif;
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: #ffd700;
+      margin-bottom: 6px;
+      letter-spacing: 2px;
+    }
+
+    .modal-sub {
+      font-size: 0.92rem;
+      color: #e2d5c0;
+      margin-bottom: 22px;
+      line-height: 1.4;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+
+    .guide-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .guide-box .icon { font-size: 2rem; margin-bottom: 6px; }
+    .guide-box .title { font-weight: 800; font-size: 0.9rem; color: #fff; }
+    .guide-box .desc { font-size: 0.72rem; color: #bbb; margin-top: 4px; line-height: 1.3; }
+
+    .btn-start {
+      width: 100%;
+      padding: 16px;
+      font-family: 'Cinzel', serif;
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #d4af37 0%, #ffe082 50%, #aa8012 100%);
+      color: #140d04;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-start:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 15px 40px rgba(212, 175, 55, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div id="stage-container">
+    <canvas id="concertCanvas"></canvas>
+
+    <!-- Top Info Pill & FNAF Controls -->
+    <div class="top-bar-hud">
+      <div class="song-pill">
+        <span class="song-name">DIES IRAE</span>
+        <span class="song-composer">Giuseppe Verdi • Messa da Requiem</span>
+        <span class="audio-badge">● Orquestra & Coro do Teatro La Scala</span>
+      </div>
+      <div class="top-controls">
+        <button class="btn-top" id="btnTogglePhoto">🖼️ Foto: POV Maestro</button>
+        <button class="btn-top" id="btnToggleCam">📷 Câmera FNAF: ON</button>
+        <button class="btn-top" id="btnPauseToggle">Pausar / Menu</button>
+      </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-card">
+        <h1 class="modal-title">MAESTRO VR</h1>
+        <p class="modal-sub">
+          Visão em <strong>primeira pessoa</strong> no pódio com <strong>câmera panorâmica estilo FNAF</strong> (a visão gira suavemente com o movimento do mouse), foto realista do concerto e notas em <strong>branco sólido ultra-nítido</strong>.
+        </p>
+
+        <div class="cards-grid">
+          <div class="guide-box">
+            <div class="icon" style="color:#ffffff;">⬇ ➡</div>
+            <div class="title" style="color:#ffffff;">CORTE (SWIPE)</div>
+            <div class="desc">Deslize a batuta na direção da seta ao cruzar a linha dourada.</div>
+          </div>
+          <div class="guide-box">
+            <div class="icon" style="color:#ffffff;">●</div>
+            <div class="title" style="color:#ffffff;">CLIQUE (CLICK)</div>
+            <div class="desc">Clique com o botão do mouse nos ataques secos e impactos BAM!</div>
+          </div>
+          <div class="guide-box">
+            <div class="icon" style="color:#ffffff;">✋</div>
+            <div class="title" style="color:#ffffff;">MANTER (HOLD)</div>
+            <div class="desc">Segure o botão pressionado para sustentar as notas longas do coro!</div>
+          </div>
+        </div>
+
+        <button class="btn-start" id="btnStartGame">SUBIR AO PÓDIO E CONDUZIR</button>
+      </div>
+    </div>
+
+    <!-- Authentic Verdi Audio Recording (Loop contínuo) -->
+    <audio id="verdiAudio" preload="auto" loop>
+      <source src="dies_irae.ogg" type="audio/ogg">
+    </audio>
+  </div>
+
+  <script>
+    /* =========================================================
+       AUDIO PLAYBACK (Pure, Pristine Recording - Zero SFX Overlays)
+       ========================================================= */
+    const audioElement = document.getElementById('verdiAudio');
+
+    function startMusic() {
+      audioElement.currentTime = 0;
+      audioElement.volume = 1.0;
+      audioElement.play().catch(err => {
+        console.warn("Erro de reprodução", err);
+      });
+    }
+
+    function pauseMusic() {
+      audioElement.pause();
+    }
+
+    /* =========================================================
+       SYNCHRONIZED BEAT MAP: 110 CUES (0s to 122s)
+       ========================================================= */
+    const VERDI_CUES = [
+      // 1. Os 4 Golpes Iniciais: CLIQUE nos impactos BAM! (3.50s a 5.65s)
+      { time: 3.50, type: 'click', lane: 0, dir: 'down', text: 'BAM 1!' },
+      { time: 4.23, type: 'click', lane: 1, dir: 'down', text: 'BAM 2!' },
+      { time: 4.97, type: 'click', lane: 0, dir: 'down', text: 'BAM 3!' },
+      { time: 5.65, type: 'click', lane: 1, dir: 'down', text: 'BAM 4!' },
+
+      // 2. Corridas Furiosas das Cordas (Swipes)
+      { time: 6.34, type: 'swipe', lane: 0, dir: 'left',  text: 'Cordas!' },
+      { time: 6.69, type: 'swipe', lane: 0, dir: 'left',  text: 'Descida!' },
+      { time: 7.09, type: 'swipe', lane: 0, dir: 'down',  text: 'Acelera!' },
+      { time: 7.51, type: 'click', lane: 1, dir: 'right', text: 'Metais!' },
+      { time: 7.88, type: 'swipe', lane: 1, dir: 'right', text: 'Fanfarra!' },
+
+      // 3. A Grande Entrada Coral: MANTER A ÓPERA (HOLD - "DIES IRAE! DIES ILLA!")
+      { time: 8.67,  type: 'hold',  duration: 1.3, lane: 0, dir: 'up', text: 'DIES IRAE!' },
+      { time: 10.17, type: 'click', lane: 1, dir: 'down', text: 'Tímpano!' },
+      { time: 10.56, type: 'swipe', lane: 0, dir: 'left', text: 'Cordas!' },
+      { time: 10.97, type: 'click', lane: 1, dir: 'right', text: 'Trompetes!' },
+      { time: 11.39, type: 'hold',  duration: 1.2, lane: 1, dir: 'up', text: 'DIES ILLA!' },
+      { time: 12.98, type: 'swipe', lane: 0, dir: 'left', text: 'Cordas!' },
+      { time: 14.30, type: 'swipe', lane: 0, dir: 'left', text: 'Transição' },
+
+      // 4. Segunda Estrofe (Ataque dos Trompetes e Tímpanos)
+      { time: 16.87, type: 'swipe', lane: 0, dir: 'left',  text: '2ª Estrofe!' },
+      { time: 17.24, type: 'swipe', lane: 0, dir: 'left',  text: 'Cordas!' },
+      { time: 17.64, type: 'click', lane: 1, dir: 'right', text: 'Trompetes!' },
+      { time: 18.22, type: 'click', lane: 0, dir: 'down',  text: 'Tímpano!' },
+
+      // 5. Sustentação Poderosa: "SOLVET SAECLUM IN FAVILLA!"
+      { time: 18.89, type: 'hold', duration: 1.7, lane: 0, dir: 'up', text: 'SOLVET SAECLUM!' },
+      { time: 20.87, type: 'swipe', lane: 1, dir: 'left', text: 'Cordas!' },
+
+      // 6. Estrondo Colossal Tutti aos 21.79s
+      { time: 21.79, type: 'click', lane: 0, dir: 'down', text: 'ESTRONDO GIGANTE!' },
+      { time: 22.14, type: 'click', lane: 1, dir: 'right', text: 'Metais!' },
+      { time: 22.50, type: 'swipe', lane: 0, dir: 'left',  text: 'Cordas!' },
+      { time: 22.86, type: 'click', lane: 1, dir: 'down', text: 'Tímpano!' },
+      { time: 23.33, type: 'hold',  duration: 1.2, lane: 0, dir: 'up', text: 'Coro Total!' },
+      { time: 24.62, type: 'click', lane: 0, dir: 'down', text: 'Tímpano!' },
+      { time: 25.02, type: 'click', lane: 1, dir: 'right', text: 'Metais!' },
+
+      // 7. Recapitulação do Tema com Orquestra Plena
+      { time: 27.27, type: 'swipe', lane: 0, dir: 'left', text: 'Cordas!' },
+      { time: 29.83, type: 'hold',  duration: 1.2, lane: 0, dir: 'up', text: 'DIES IRAE!' },
+      { time: 31.48, type: 'click', lane: 1, dir: 'down', text: 'BAM!' },
+      { time: 32.33, type: 'hold',  duration: 1.2, lane: 1, dir: 'up', text: 'DIES ILLA!' },
+      { time: 33.64, type: 'click', lane: 0, dir: 'down', text: 'Tímpano!' },
+      { time: 34.47, type: 'swipe', lane: 0, dir: 'left', text: 'Cordas!' },
+      { time: 35.18, type: 'click', lane: 1, dir: 'down', text: 'ESTRONDO!' },
+      { time: 36.39, type: 'hold',  duration: 1.4, lane: 0, dir: 'up', text: 'DIES ILLA!' },
+      { time: 38.34, type: 'click', lane: 1, dir: 'down', text: 'CLÍMAX!' },
+
+      // 8. Ondas de Tempestade Sinfônica (42s a 56s)
+      { time: 42.16, type: 'click', lane: 0, dir: 'down', text: 'GOLPE!' },
+      { time: 42.58, type: 'click', lane: 1, dir: 'right', text: 'Metais!' },
+      { time: 42.97, type: 'swipe', lane: 0, dir: 'left', text: 'Cordas!' },
+      { time: 44.58, type: 'click', lane: 1, dir: 'down', text: 'BUMBO!' },
+      { time: 46.03, type: 'swipe', lane: 0, dir: 'left', text: 'Cordas!' },
+      { time: 47.46, type: 'hold',  duration: 1.4, lane: 0, dir: 'up', text: 'Coro Pleno!' },
+      { time: 49.22, type: 'click', lane: 1, dir: 'down', text: 'ESTRONDO!' },
+      { time: 50.82, type: 'hold',  duration: 1.8, lane: 0, dir: 'up', text: 'DIES IRAE!' },
+      { time: 52.86, type: 'click', lane: 1, dir: 'right', text: 'Metais!' },
+      { time: 54.18, type: 'click', lane: 0, dir: 'down', text: 'BUMBO!' },
+
+      // 9. O Clímax do Tema Coral (60s a 68s)
+      { time: 60.26, type: 'hold',  duration: 1.6, lane: 0, dir: 'up', text: 'DIES IRAE!' },
+      { time: 61.73, type: 'click', lane: 1, dir: 'down', text: 'Tímpano!' },
+      { time: 62.50, type: 'hold',  duration: 1.8, lane: 1, dir: 'up', text: 'DIES ILLA!' },
+      { time: 64.97, type: 'click', lane: 0, dir: 'down', text: 'Tímpano!' },
+      { time: 65.73, type: 'hold',  duration: 1.2, lane: 0, dir: 'up', text: 'SOLVET!' },
+      { time: 66.67, type: 'click', lane: 1, dir: 'down', text: 'GOLPE FINAL!' },
+      { time: 67.94, type: 'swipe', lane: 0, dir: 'left', text: 'Pianissimo...' },
+
+      // 10. Os Sussurros Misteriosos: MANTER AS HARMONIAS SUAVES (69s a 96s)
+      { time: 69.26, type: 'swipe', lane: 0, dir: 'left', text: 'Suave...' },
+      { time: 71.79, type: 'hold',  duration: 3.2, lane: 0, dir: 'up', text: 'Quantus tremor est...' },
+      { time: 76.73, type: 'swipe', lane: 0, dir: 'left', text: 'Cordas delicadas' },
+      { time: 80.77, type: 'hold',  duration: 2.8, lane: 1, dir: 'up', text: 'Sussurros do Coro' },
+      { time: 83.93, type: 'swipe', lane: 0, dir: 'left', text: 'Tensão crescendo...' },
+      { time: 89.40, type: 'swipe', lane: 1, dir: 'left', text: 'Aceleração' },
+      { time: 91.62, type: 'hold',  duration: 2.2, lane: 0, dir: 'up', text: 'Misterioso...' },
+      { time: 96.16, type: 'click', lane: 1, dir: 'right', text: 'PREPARAR!' },
+
+      // 11. TUBA MIRUM - As Fanfarras de Trompetes e Grande Sustentação Final (96.8s a 118s)
+      { time: 96.83,  type: 'click', lane: 1, dir: 'right', text: 'TUBA MIRUM!' },
+      { time: 98.20,  type: 'click', lane: 1, dir: 'right', text: 'Trompetes!' },
+      { time: 100.15, type: 'click', lane: 1, dir: 'right', text: 'Fanfarra!' },
+      { time: 100.74, type: 'click', lane: 0, dir: 'down',  text: 'Tímpano!' },
+      { time: 101.99, type: 'click', lane: 1, dir: 'right', text: 'Eco dos Metais!' },
+      { time: 102.64, type: 'click', lane: 0, dir: 'down',  text: 'BUMBO!' },
+      { time: 103.28, type: 'click', lane: 1, dir: 'right', text: 'Metais potentes!' },
+      { time: 103.95, type: 'click', lane: 0, dir: 'down',  text: 'Tímpano!' },
+      { time: 107.69, type: 'click', lane: 1, dir: 'right', text: 'Chamado Heróico!' },
+      { time: 109.01, type: 'click', lane: 0, dir: 'down',  text: 'ESTRONDO DE BUMBO!' },
+      { time: 111.41, type: 'hold',  duration: 3.5, lane: 1, dir: 'right', text: 'APOTEOSE DOS METAIS!' },
+      { time: 114.48, type: 'click', lane: 0, dir: 'down',  text: 'GOLPE FINAL!' }
+    ];
+
+    /* =========================================================
+       CANVAS & GAME SETUP
+       ========================================================= */
+    const canvas = document.getElementById('concertCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const modalOverlay = document.getElementById('modalOverlay');
+    const btnStartGame = document.getElementById('btnStartGame');
+    const btnPauseToggle = document.getElementById('btnPauseToggle');
+    const btnTogglePhoto = document.getElementById('btnTogglePhoto');
+    const btnToggleCam = document.getElementById('btnToggleCam');
+
+    // FNAF-Style Camera System
+    const camera = {
+      x: 0,
+      y: 0,
+      targetX: 0,
+      targetY: 0,
+      enabled: true,
+      panSensitivity: 0.18 // 18% of screen width max pan
+    };
+
+    // Realistic Background Photographs
+    const BACKGROUNDS = [
+      { id: 'pov', name: 'POV Maestro', src: 'orchestra_bg.jpg' },
+      { id: 'verdi', name: 'Verdi Requiem', src: 'verdi_requiem_stage.jpg' },
+      { id: 'seattle', name: 'Seattle Hall', src: 'seattle_symphony.jpg' },
+      { id: 'procedural', name: 'Sala 3D', src: '' }
+    ];
+    let currentBgIndex = 0;
+    const loadedImages = {};
+
+    BACKGROUNDS.forEach(bg => {
+      if (bg.src) {
+        const img = new Image();
+        img.src = bg.src;
+        loadedImages[bg.id] = img;
+      }
+    });
+
+    if (btnTogglePhoto) {
+      btnTogglePhoto.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentBgIndex = (currentBgIndex + 1) % BACKGROUNDS.length;
+        btnTogglePhoto.textContent = `🖼️ Foto: ${BACKGROUNDS[currentBgIndex].name}`;
+      });
+    }
+
+    if (btnToggleCam) {
+      btnToggleCam.addEventListener('click', (e) => {
+        e.stopPropagation();
+        camera.enabled = !camera.enabled;
+        btnToggleCam.textContent = camera.enabled ? '📷 Câmera FNAF: ON' : '📷 Câmera FNAF: OFF';
+      });
+    }
+
+    const game = {
+      score: 0,
+      combo: 0,
+      maxCombo: 0,
+      multiplier: 1,
+      accuracy: 100.0,
+      notesHit: 0,
+      totalNotesPassed: 0,
+      health: 80,
+      screenShake: 0,
+      hitFeedbackText: "",
+      hitFeedbackTimer: 0,
+      isPlaying: false
+    };
+
+    const mouse = {
+      x: window.innerWidth * 0.5,
+      y: window.innerHeight * 0.70,
+      prevX: window.innerWidth * 0.5,
+      prevY: window.innerHeight * 0.70,
+      vx: 0,
+      vy: 0,
+      isDown: false,
+      trail: [],
+      swipeCooldown: 0
+    };
+
+    let liveCues = [];
+    let cueSpawnIndex = 0;
+    let lastAudioTime = 0;
+    let activeHoldCue = null;
+    let orchestraMusicians = [];
+
+    function resetCues() {
+      liveCues = [];
+      cueSpawnIndex = 0;
+      lastAudioTime = 0;
+      activeHoldCue = null;
+    }
+
+    function setupOrchestra() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w * 0.5;
+
+      orchestraMusicians = [];
+
+      // Front Row Left (Violinists 1)
+      for (let i = 0; i < 4; i++) {
+        orchestraMusicians.push({
+          x: cx - 180 - i * 85,
+          y: h * 0.55 + i * 16,
+          type: 'violin',
+          bowPhase: Math.random() * Math.PI * 2,
+          energy: 0
+        });
+      }
+
+      // Front Row Right (Violinists 2 & Violas)
+      for (let i = 0; i < 4; i++) {
+        orchestraMusicians.push({
+          x: cx + 180 + i * 85,
+          y: h * 0.55 + i * 16,
+          type: 'violin',
+          bowPhase: Math.random() * Math.PI * 2,
+          energy: 0
+        });
+      }
+
+      // Middle Row (Cellos & Woodwinds)
+      for (let i = -4; i <= 4; i++) {
+        if (Math.abs(i) === 0) continue;
+        orchestraMusicians.push({
+          x: cx + i * 75,
+          y: h * 0.44 + Math.abs(i) * 6,
+          type: (Math.abs(i) > 2) ? 'cello' : 'flute',
+          bowPhase: Math.random() * Math.PI * 2,
+          energy: 0
+        });
+      }
+
+      // Back Row (Timpani & Bass Drum)
+      orchestraMusicians.push({
+        x: cx - 60,
+        y: h * 0.36,
+        type: 'timpani',
+        bowPhase: 0,
+        energy: 0
+      });
+      orchestraMusicians.push({
+        x: cx + 60,
+        y: h * 0.36,
+        type: 'bass_drum',
+        bowPhase: 0,
+        energy: 0
+      });
+
+      for (let i = -3; i <= 3; i++) {
+        if (Math.abs(i) <= 1) continue;
+        orchestraMusicians.push({
+          x: cx + i * 95,
+          y: h * 0.36,
+          type: 'horn',
+          bowPhase: 0,
+          energy: 0
+        });
+      }
+    }
+
+    /* =========================================================
+       INPUT DETECTION
+       ========================================================= */
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      mouse.isDown = true;
+      handlePlayerClickOrHoldStart();
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button !== 0) return;
+      mouse.isDown = false;
+      handlePlayerHoldRelease();
+    });
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+        mouse.isDown = true;
+        handlePlayerClickOrHoldStart();
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      mouse.isDown = false;
+      handlePlayerHoldRelease();
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    function handlePlayerClickOrHoldStart() {
+      let bestClickCue = null;
+      let bestClickDiff = 999;
+      let bestHoldCue = null;
+      let bestHoldDiff = 999;
+
+      for (let i = 0; i < liveCues.length; i++) {
+        const c = liveCues[i];
+        if (c.hit || c.missed) continue;
+        const diff = Math.abs(c.progress - 1.0);
+
+        if (c.type === 'click' && diff < 0.28 && diff < bestClickDiff) {
+          bestClickDiff = diff;
+          bestClickCue = c;
+        } else if (c.type === 'hold' && diff < 0.30 && diff < bestHoldDiff) {
+          bestHoldDiff = diff;
+          bestHoldCue = c;
+        }
+      }
+
+      if (bestClickCue) {
+        bestClickCue.hit = true;
+        scoreHit(bestClickCue, bestClickDiff, "Perfect!");
+        return;
+      }
+
+      if (bestHoldCue) {
+        activeHoldCue = bestHoldCue;
+        activeHoldCue.isHolding = true;
+        activeHoldCue.holdStartedTime = audioElement.currentTime;
+        showHitFeedback("Holding...");
+      }
+    }
+
+    function handlePlayerHoldRelease() {
+      if (!activeHoldCue) return;
+
+      const c = activeHoldCue;
+      const totalDuration = c.duration || 1.5;
+      const heldRatio = (c.holdElapsed || 0) / totalDuration;
+
+      if (heldRatio >= 0.70) {
+        c.hit = true;
+        scoreHit(c, 0.04, "Perfect!");
+      } else {
+        c.missed = true;
+        triggerMiss("Early Release!");
+      }
+
+      activeHoldCue = null;
+    }
+
+    function checkConductorSwipes() {
+      mouse.vx = mouse.x - mouse.prevX;
+      mouse.vy = mouse.y - mouse.prevY;
+      mouse.prevX = mouse.x;
+      mouse.prevY = mouse.y;
+
+      mouse.trail.unshift({ x: mouse.x, y: mouse.y, age: 0 });
+      if (mouse.trail.length > 18) mouse.trail.pop();
+      mouse.trail.forEach(t => t.age++);
+
+      const speed = Math.hypot(mouse.vx, mouse.vy);
+
+      if (mouse.swipeCooldown > 0) {
+        mouse.swipeCooldown--;
+        return;
+      }
+
+      const thresh = 14;
+      let detectedDir = null;
+
+      if (Math.abs(mouse.vx) > Math.abs(mouse.vy)) {
+        if (mouse.vx < -thresh) detectedDir = 'left';
+        else if (mouse.vx > thresh) detectedDir = 'right';
+      } else {
+        if (mouse.vy < -thresh) detectedDir = 'up';
+        else if (mouse.vy > thresh) detectedDir = 'down';
+      }
+
+      if (detectedDir && speed > 18) {
+        mouse.swipeCooldown = 6;
+        evaluatePlayerSwipe(detectedDir);
+      }
+    }
+
+    function evaluatePlayerSwipe(dir) {
+      let bestCue = null;
+      let bestDiff = 999;
+
+      for (let i = 0; i < liveCues.length; i++) {
+        const c = liveCues[i];
+        if (c.hit || c.missed || c.type === 'hold') continue;
+        const diff = Math.abs(c.progress - 1.0);
+        if (diff < 0.28 && diff < bestDiff) {
+          bestDiff = diff;
+          bestCue = c;
+        }
+      }
+
+      if (bestCue) {
+        if (bestCue.type === 'swipe' && (bestCue.dir === dir || (dir === 'down' && bestCue.dir === 'down'))) {
+          bestCue.hit = true;
+          scoreHit(bestCue, bestDiff);
+        } else if (bestCue.type === 'click') {
+          bestCue.hit = true;
+          scoreHit(bestCue, bestDiff, "Perfect!");
+        } else if (bestCue.dir !== dir) {
+          bestCue.missed = true;
+          triggerMiss("Miss!");
+        }
+      }
+    }
+
+    function scoreHit(cue, diff, customLabel) {
+      game.totalNotesPassed++;
+      game.notesHit++;
+      game.accuracy = ((game.notesHit / game.totalNotesPassed) * 100).toFixed(1);
+
+      let points = 50;
+      let feedback = customLabel || "Good!";
+
+      if (diff < 0.08) {
+        points = 120;
+        feedback = customLabel || "Perfect!";
+      } else if (diff < 0.16) {
+        points = 80;
+        feedback = customLabel || "Great!";
+      }
+
+      game.combo++;
+      if (game.combo > game.maxCombo) game.maxCombo = game.combo;
+      game.multiplier = Math.min(4, 1 + Math.floor(game.combo / 6));
+      game.score += points * game.multiplier;
+      game.health = Math.min(100, game.health + 4.0);
+
+      orchestraMusicians.forEach(m => m.energy = 1.0);
+
+      if (cue.text && cue.text.includes('BAM')) {
+        game.screenShake = 16;
+      } else {
+        game.screenShake = 4;
+      }
+
+      showHitFeedback(feedback);
+    }
+
+    function triggerMiss(msg = "Miss!") {
+      game.totalNotesPassed++;
+      game.accuracy = ((game.notesHit / game.totalNotesPassed) * 100).toFixed(1);
+      game.combo = 0;
+      game.multiplier = 1;
+      game.health = Math.max(10, game.health - 6.0);
+      showHitFeedback(msg);
+    }
+
+    function showHitFeedback(text) {
+      game.hitFeedbackText = text;
+      game.hitFeedbackTimer = 1.0;
+    }
+
+    /* =========================================================
+       UPDATE LOOP
+       ========================================================= */
+    function updateGame(dt) {
+      checkConductorSwipes();
+
+      const currentTime = audioElement.currentTime;
+
+      if (currentTime < lastAudioTime - 2.0) {
+        resetCues();
+      }
+      lastAudioTime = currentTime;
+
+      // Handle active HOLD
+      if (activeHoldCue && activeHoldCue.isHolding) {
+        if (!activeHoldCue.holdElapsed) activeHoldCue.holdElapsed = 0;
+        activeHoldCue.holdElapsed += dt;
+
+        game.score += Math.round(15 * game.multiplier * dt * 10);
+        game.health = Math.min(100, game.health + 3.0 * dt);
+
+        if (activeHoldCue.holdElapsed >= (activeHoldCue.duration || 1.5)) {
+          handlePlayerHoldRelease();
+        }
+      }
+
+      const travelDuration = 1.35;
+      while (cueSpawnIndex < VERDI_CUES.length && VERDI_CUES[cueSpawnIndex].time <= currentTime + travelDuration) {
+        const cueData = VERDI_CUES[cueSpawnIndex];
+        liveCues.push({
+          time: cueData.time,
+          type: cueData.type || 'swipe',
+          duration: cueData.duration || 0,
+          lane: cueData.lane !== undefined ? cueData.lane : (cueData.dir === 'left' ? 0 : 1),
+          dir: cueData.dir,
+          text: cueData.text,
+          progress: 0.0,
+          hit: false,
+          missed: false,
+          isHolding: false,
+          holdElapsed: 0
+        });
+        cueSpawnIndex++;
+      }
+
+      for (let i = liveCues.length - 1; i >= 0; i--) {
+        const c = liveCues[i];
+        const timeLeft = c.time - currentTime;
+        c.progress = 1.0 - (timeLeft / travelDuration);
+
+        if (!c.hit && !c.missed && !c.isHolding && c.progress > 1.24) {
+          c.missed = true;
+          triggerMiss("Miss!");
+        }
+
+        if (c.progress > 1.45 || c.hit) {
+          liveCues.splice(i, 1);
+        }
+      }
+
+      if (game.screenShake > 0) game.screenShake *= 0.88;
+      if (game.hitFeedbackTimer > 0) game.hitFeedbackTimer -= dt * 2.5;
+    }
+
+    /* =========================================================
+       RENDER: MAESTRO VR WITH FNAF CAMERA & REALISTIC PHOTO
+       ========================================================= */
+    function drawProceduralConcertHall(ctx, w, h, cx, camX, camY) {
+      // 1. Concert Hall Acoustic Shell
+      const hallGrad = ctx.createLinearGradient(0, 0, 0, h * 0.65);
+      hallGrad.addColorStop(0, '#754f35');
+      hallGrad.addColorStop(0.35, '#b8855a');
+      hallGrad.addColorStop(0.8, '#cfa075');
+      hallGrad.addColorStop(1, '#b6875d');
+      ctx.fillStyle = hallGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Upper Balcony Arch (moves with camX * 0.7)
+      const bArchX = cx + camX * 0.7;
+      ctx.fillStyle = '#613e27';
+      ctx.beginPath();
+      ctx.ellipse(bArchX, h * 0.12, w * 0.56, h * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White Upper Balcony Railing
+      ctx.fillStyle = '#f0ece1';
+      ctx.beginPath();
+      ctx.ellipse(bArchX, h * 0.15, w * 0.54, h * 0.08, 0, 0, Math.PI);
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = '#e6decb';
+      ctx.stroke();
+
+      // Balcony Lights
+      for (let i = -6; i <= 6; i++) {
+        const lx = bArchX + i * (w * 0.078);
+        const ly = h * 0.09 + Math.abs(i) * 2;
+        ctx.fillStyle = '#ffeedd';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Wooden Stage Floor
+      const floorGrad = ctx.createLinearGradient(0, h * 0.45, 0, h);
+      floorGrad.addColorStop(0, '#caa37d');
+      floorGrad.addColorStop(0.5, '#e4c49f');
+      floorGrad.addColorStop(1, '#caa078');
+      ctx.fillStyle = floorGrad;
+      ctx.beginPath();
+      ctx.rect(0, h * 0.42, w, h * 0.58);
+      ctx.fill();
+
+      // Planks
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 1.5;
+      for (let p = -8; p <= 8; p++) {
+        ctx.beginPath();
+        ctx.moveTo(bArchX + p * 30, h * 0.42);
+        ctx.lineTo(bArchX + p * 120, h);
+        ctx.stroke();
+      }
+
+      // 2. Orchestra Musicians
+      const now = performance.now() * 0.003;
+      orchestraMusicians.forEach(m => {
+        m.energy = Math.max(0, m.energy - 0.025);
+        const bounce = Math.sin(now * 3 + m.bowPhase) * (1.5 + m.energy * 5);
+        const mx = m.x + camX * 0.85;
+        const my = m.y + bounce + camY * 0.5;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(mx, my + 14, 16, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(mx, my + 4, 11, 0, Math.PI, false);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(mx - 3, my - 3, 6, 4);
+
+        ctx.fillStyle = '#dfaf8e';
+        ctx.beginPath();
+        ctx.arc(mx, my - 8, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#3a271d';
+        ctx.beginPath();
+        ctx.arc(mx, my - 11, 6.5, Math.PI, 0, false);
+        ctx.fill();
+
+        if (m.type === 'violin' || m.type === 'cello') {
+          const bowOff = Math.sin(now * 6 + m.bowPhase) * 7;
+          ctx.strokeStyle = '#8d4e28';
+          ctx.lineWidth = (m.type === 'cello') ? 4.5 : 3;
+          ctx.beginPath();
+          ctx.arc(mx - 5, my - 3, 5, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(mx - 9 + bowOff, my - 7);
+          ctx.lineTo(mx + 3 + bowOff, my + 2);
+          ctx.stroke();
+        } else if (m.type === 'flute') {
+          ctx.strokeStyle = '#ddd';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(mx - 2, my - 6);
+          ctx.lineTo(mx + 10, my - 3);
+          ctx.stroke();
+        } else if (m.type === 'horn') {
+          ctx.strokeStyle = '#ffd700';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(mx - 4, my - 6);
+          ctx.lineTo(mx + 10, my - 10);
+          ctx.stroke();
+        } else if (m.type === 'timpani') {
+          ctx.fillStyle = '#b87333';
+          ctx.beginPath();
+          ctx.ellipse(mx, my + 8, 16, 9, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (m.type === 'bass_drum') {
+          ctx.fillStyle = '#f0ece1';
+          ctx.beginPath();
+          ctx.ellipse(mx, my + 5, 18, 14, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#6a381a';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#111';
+        ctx.fillRect(mx - 8, my + 6, 16, 10);
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(mx, my + 16);
+        ctx.lineTo(mx, my + 26);
+        ctx.stroke();
+      });
+    }
+
+    function render() {
+      ctx.save();
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w * 0.5;
+
+      // 1. FNAF CAMERA PAN DYNAMICS (Based on mouse position)
+      if (camera.enabled) {
+        // Normalized mouse position: -1 (left) to +1 (right)
+        const mouseNormX = Math.max(-1, Math.min(1, (mouse.x / w) * 2 - 1));
+        const mouseNormY = Math.max(-1, Math.min(1, (mouse.y / h) * 2 - 1));
+
+        const maxPanX = w * camera.panSensitivity;
+        const maxPanY = h * 0.045;
+
+        // In FNAF, turning head left moves viewport left (world shifts right)
+        camera.targetX = -mouseNormX * maxPanX;
+        camera.targetY = -mouseNormY * maxPanY;
+
+        // Iconic FNAF smooth inertia & damping
+        camera.x += (camera.targetX - camera.x) * 0.08;
+        camera.y += (camera.targetY - camera.y) * 0.08;
+      } else {
+        camera.x += (0 - camera.x) * 0.1;
+        camera.y += (0 - camera.y) * 0.1;
+      }
+
+      let camX = camera.x;
+      let camY = camera.y;
+
+      if (game.screenShake > 0.5) {
+        camX += (Math.random() - 0.5) * game.screenShake;
+        camY += (Math.random() - 0.5) * game.screenShake;
+      }
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 2. BACKGROUND: REALISTIC PHOTO OR PROCEDURAL CONCERT HALL
+      const bgConfig = BACKGROUNDS[currentBgIndex];
+      const activeImg = bgConfig && bgConfig.src ? loadedImages[bgConfig.id] : null;
+
+      if (activeImg && activeImg.complete && activeImg.naturalWidth > 0) {
+        // Scale realistic photo to cover canvas plus full FNAF camera pan margins
+        const maxPanX = w * camera.panSensitivity;
+        const maxPanY = h * 0.045;
+        const panMarginX = maxPanX * 2.4;
+        const panMarginY = maxPanY * 2.4;
+
+        const targetW = w + panMarginX;
+        const targetH = h + panMarginY;
+
+        const scale = Math.max(targetW / activeImg.naturalWidth, targetH / activeImg.naturalHeight);
+        const drawW = activeImg.naturalWidth * scale;
+        const drawH = activeImg.naturalHeight * scale;
+
+        // Center image and apply camera pan
+        const drawX = (w - drawW) * 0.5 + camX;
+        const drawY = (h - drawH) * 0.5 + camY;
+
+        ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+
+        // Warm concert hall atmosphere (golden chandelier stage lighting)
+        const stageAtmosphere = ctx.createRadialGradient(
+          cx + camX * 0.4, h * 0.45 + camY * 0.4, w * 0.15,
+          cx + camX * 0.4, h * 0.45 + camY * 0.4, w * 0.8
+        );
+        stageAtmosphere.addColorStop(0, 'rgba(255, 220, 160, 0.04)');
+        stageAtmosphere.addColorStop(0.65, 'rgba(30, 15, 8, 0.22)');
+        stageAtmosphere.addColorStop(1, 'rgba(10, 5, 2, 0.65)');
+        ctx.fillStyle = stageAtmosphere;
+        ctx.fillRect(0, 0, w, h);
+      } else {
+        // Fallback procedural acoustic hall
+        drawProceduralConcertHall(ctx, w, h, cx, camX, camY);
+      }
+
+      // FNAF Dark Perimeter Vignette
+      const fnafVig = ctx.createRadialGradient(cx, h * 0.52, w * 0.32, cx, h * 0.52, w * 0.85);
+      fnafVig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      fnafVig.addColorStop(0.72, 'rgba(0, 0, 0, 0.28)');
+      fnafVig.addColorStop(1, 'rgba(0, 0, 0, 0.82)');
+      ctx.fillStyle = fnafVig;
+      ctx.fillRect(0, 0, w, h);
+
+      // 3. THE CENTER DIGITAL TABLET (MOUNTED ON MUSIC STAND) WITH 3D PARALLAX
+      // Stand parallax factor: shifts at 0.38 speed relative to distant background
+      const standCX = cx + camX * 0.38;
+      const tabW_top = 260;
+      const tabW_bot = 420;
+      const tabH = 175;
+      const tabY_top = h * 0.49 + camY * 0.25;
+      const tabY_bot = tabY_top + tabH;
+
+      const tabL_top = standCX - tabW_top * 0.5;
+      const tabR_top = standCX + tabW_top * 0.5;
+      const tabL_bot = standCX - tabW_bot * 0.5;
+      const tabR_bot = standCX + tabW_bot * 0.5;
+
+      // Bezel Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.beginPath();
+      ctx.moveTo(tabL_top - 14, tabY_top - 12);
+      ctx.lineTo(tabR_top + 14, tabY_top - 12);
+      ctx.lineTo(tabR_bot + 18, tabY_bot + 14);
+      ctx.lineTo(tabL_bot - 18, tabY_bot + 14);
+      ctx.closePath();
+      ctx.fill();
+
+      // Tablet Outer Bezel
+      ctx.fillStyle = '#1a1d24';
+      ctx.beginPath();
+      ctx.moveTo(tabL_top - 8, tabY_top - 6);
+      ctx.lineTo(tabR_top + 8, tabY_top - 6);
+      ctx.lineTo(tabR_bot + 12, tabY_bot + 8);
+      ctx.lineTo(tabL_bot - 12, tabY_bot + 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#323745';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Tablet Screen
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(tabL_top, tabY_top);
+      ctx.lineTo(tabR_top, tabY_top);
+      ctx.lineTo(tabR_bot, tabY_bot);
+      ctx.lineTo(tabL_bot, tabY_bot);
+      ctx.closePath();
+      ctx.clip();
+
+      // Screen Background
+      const screenGrad = ctx.createLinearGradient(0, tabY_top, 0, tabY_bot);
+      screenGrad.addColorStop(0, '#101726');
+      screenGrad.addColorStop(0.5, '#1e2638');
+      screenGrad.addColorStop(1, '#273248');
+      ctx.fillStyle = screenGrad;
+      ctx.fillRect(tabL_bot - 20, tabY_top - 10, tabW_bot + 40, tabH + 20);
+
+      // Highway Lanes
+      const hwW_top = 100;
+      const hwW_bot = 350;
+      const hwL_top = standCX - hwW_top * 0.5;
+      const hwR_top = standCX + hwW_top * 0.5;
+      const hwL_bot = standCX - hwW_bot * 0.5;
+      const hwR_bot = standCX + hwW_bot * 0.5;
+
+      ctx.fillStyle = '#1b2333';
+      ctx.beginPath();
+      ctx.moveTo(hwL_top, tabY_top + 28);
+      ctx.lineTo(hwR_top, tabY_top + 28);
+      ctx.lineTo(hwR_bot, tabY_bot);
+      ctx.lineTo(hwL_bot, tabY_bot);
+      ctx.closePath();
+      ctx.fill();
+
+      // White Center Lane Divider
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(standCX, tabY_top + 28);
+      ctx.lineTo(standCX, tabY_bot);
+      ctx.stroke();
+
+      // Outer Highway Edges
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.beginPath();
+      ctx.moveTo(hwL_top, tabY_top + 28);
+      ctx.lineTo(hwL_bot, tabY_bot);
+      ctx.moveTo(hwR_top, tabY_top + 28);
+      ctx.lineTo(hwR_bot, tabY_bot);
+      ctx.stroke();
+
+      // CLEAN SOLID HIT LINE (ZERO GLOW/BLUR - 100% CRISP)
+      const hitBarY = tabY_bot - 38;
+      const hitL = standCX - (hwW_top + (hwW_bot - hwW_top) * 0.78) * 0.5;
+      const hitR = standCX + (hwW_top + (hwW_bot - hwW_top) * 0.78) * 0.5;
+
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(hitL, hitBarY);
+      ctx.lineTo(hitR, hitBarY);
+      ctx.stroke();
+
+      // "Perfect!" feedback text on the strike line
+      if (game.hitFeedbackTimer > 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "bold 13px 'Outfit', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText(game.hitFeedbackText, standCX + 50, hitBarY + 14);
+      }
+
+      // NOTES: 100% PURE SOLID WHITE, CRISP EDGES, ZERO GLOW / ZERO BLUR!
+      liveCues.forEach(c => {
+        if (c.hit) return;
+        const p = c.progress;
+
+        const ny = (tabY_top + 28) + p * (hitBarY - (tabY_top + 28));
+        const currentHwW = hwW_top + p * (hwW_bot - hwW_top);
+        const laneOffset = (c.lane === 0 ? -1 : 1) * (currentHwW * 0.25);
+        const nx = standCX + laneOffset;
+
+        const radius = 9 + p * 12;
+
+        // For HOLD notes: draw a crisp solid sustain ribbon behind the note head
+        if (c.type === 'hold' && c.duration) {
+          const durationProgress = Math.min(0.5, c.duration * 0.15);
+          const tailP = Math.max(0, p - durationProgress);
+          const tailY = (tabY_top + 28) + tailP * (hitBarY - (tabY_top + 28));
+          const tailHwW = hwW_top + tailP * (hwW_bot - hwW_top);
+          const tailX = standCX + (c.lane === 0 ? -1 : 1) * (tailHwW * 0.25);
+          const tailRad = 9 + tailP * 12;
+
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(nx - radius * 0.65, ny);
+          ctx.lineTo(tailX - tailRad * 0.65, tailY);
+          ctx.lineTo(tailX + tailRad * 0.65, tailY);
+          ctx.lineTo(nx + radius * 0.65, ny);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // SOLID OPAQUE WHITE DISC (NO GRADIENT, NO GLOW, 100% VISIBLE!)
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(nx, ny, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // CRISP BLACK BORDER FOR RAZOR-SHARP CONTRAST
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // CRISP BLACK VECTOR DIRECTION ARROWS & ICONS
+        if (c.type === 'click') {
+          // Sharp bullseye target
+          ctx.fillStyle = '#000000';
+          ctx.beginPath();
+          ctx.arc(nx, ny, radius * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(nx, ny, radius * 0.75, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (c.type === 'hold') {
+          // Bold "HOLD" label
+          ctx.fillStyle = '#000000';
+          ctx.font = `900 ${Math.max(8, Math.round(radius * 0.55))}px 'Outfit', sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText("HOLD", nx, ny);
+        } else {
+          // Sharp vector directional arrow (rotates according to direction)
+          ctx.save();
+          ctx.translate(nx, ny);
+          let rot = 0;
+          if (c.dir === 'right') rot = 0;
+          else if (c.dir === 'down') rot = Math.PI / 2;
+          else if (c.dir === 'left') rot = Math.PI;
+          else if (c.dir === 'up') rot = -Math.PI / 2;
+          ctx.rotate(rot);
+
+          ctx.fillStyle = '#000000';
+          const s = radius * 0.7;
+          ctx.beginPath();
+          ctx.moveTo(s, 0);
+          ctx.lineTo(s * 0.1, -s * 0.65);
+          ctx.lineTo(s * 0.1, -s * 0.26);
+          ctx.lineTo(-s * 0.65, -s * 0.26);
+          ctx.lineTo(-s * 0.65, s * 0.26);
+          ctx.lineTo(s * 0.1, s * 0.26);
+          ctx.lineTo(s * 0.1, s * 0.65);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // CRISP SOLID WHITE TIMING RING (NO BLUR, NO GLOW)
+        if (p > 0.4 && p <= 1.0) {
+          const ringRad = radius + (1.0 - p) * 35;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(nx, ny, ringRad, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+
+      // Tablet Top HUD
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "bold 11px 'Outfit', sans-serif";
+      ctx.textAlign = 'right';
+      ctx.fillText(`${game.accuracy}%`, tabR_top - 12, tabY_top + 16);
+      ctx.fillStyle = '#64d2ff';
+      ctx.fillText(`+${game.score}`, tabR_top - 12, tabY_top + 28);
+
+      ctx.fillStyle = '#ffaa00';
+      ctx.font = "bold 11px 'Outfit', sans-serif";
+      ctx.textAlign = 'center';
+      ctx.fillText(`x${game.multiplier} COMBO: ${game.combo}`, standCX, tabY_top + 18);
+
+      // Green Health / Tension Line
+      ctx.fillStyle = '#30d158';
+      const greenW = (tabW_bot - 40) * (game.health / 100);
+      ctx.fillRect(standCX - (tabW_bot - 40) * 0.5, tabY_bot - 6, greenW, 4);
+
+      ctx.restore(); // End Tablet clip
+
+      // 4. OPEN SCORE BOOK (UNDER THE TABLET WITH PARALLAX)
+      const bookY = tabY_bot + 6;
+      const bookW = 280;
+      const bookH = 110;
+
+      ctx.fillStyle = '#150c07';
+      ctx.beginPath();
+      ctx.rect(standCX - (bookW + 20) * 0.5, bookY, bookW + 20, bookH + 15);
+      ctx.fill();
+      ctx.strokeStyle = '#d4af37';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f6f1de';
+      ctx.beginPath();
+      ctx.moveTo(standCX - 5, bookY + 6);
+      ctx.lineTo(standCX - bookW * 0.5, bookY + 12);
+      ctx.lineTo(standCX - bookW * 0.5, bookY + bookH);
+      ctx.lineTo(standCX - 5, bookY + bookH - 4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(standCX + 5, bookY + 6);
+      ctx.lineTo(standCX + bookW * 0.5, bookY + 12);
+      ctx.lineTo(standCX + bookW * 0.5, bookY + bookH);
+      ctx.lineTo(standCX + 5, bookY + bookH - 4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(standCX - 6, bookY + 6, 12, bookH);
+
+      ctx.fillStyle = '#222';
+      for (let s = 0; s < 4; s++) {
+        const sy = bookY + 22 + s * 20;
+        ctx.fillRect(standCX - bookW * 0.44, sy, bookW * 0.38, 1);
+        ctx.fillRect(standCX - bookW * 0.44, sy + 3, bookW * 0.38, 1);
+        ctx.fillRect(standCX - bookW * 0.44, sy + 6, bookW * 0.38, 1);
+
+        for (let n = 0; n < 4; n++) {
+          ctx.beginPath();
+          ctx.arc(standCX - bookW * 0.40 + n * 24, sy + 2, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillRect(standCX + 15, sy, bookW * 0.38, 1);
+        ctx.fillRect(standCX + 15, sy + 3, bookW * 0.38, 1);
+        ctx.fillRect(standCX + 15, sy + 6, bookW * 0.38, 1);
+
+        for (let n = 0; n < 4; n++) {
+          ctx.beginPath();
+          ctx.arc(standCX + 25 + n * 24, sy + 4, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 5. FIRST-PERSON CONDUCTOR HANDS
+      // Left Hand
+      const isHoldingNow = (activeHoldCue && activeHoldCue.isHolding);
+      const lhX = standCX - 240 + (mouse.x - cx) * 0.1;
+      const lhY = isHoldingNow ? (h * 0.62) : (h * 0.72 - (h - mouse.y) * 0.12);
+
+      ctx.fillStyle = '#0c0a10';
+      ctx.beginPath();
+      ctx.ellipse(lhX - 80, lhY + 110, 45, 90, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f8f8f8';
+      ctx.beginPath();
+      ctx.ellipse(lhX - 35, lhY + 55, 14, 28, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#dca686';
+      ctx.beginPath();
+      ctx.ellipse(lhX, lhY + 20, 22, 28, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      const fingerAngles = [-0.65, -0.35, -0.05, 0.25, 0.6];
+      const fingerLens = [34, 42, 45, 38, 28];
+      ctx.strokeStyle = '#dca686';
+      ctx.lineWidth = 9;
+      ctx.lineCap = 'round';
+
+      for (let f = 0; f < 5; f++) {
+        const ang = fingerAngles[f] - 0.4;
+        const fl = fingerLens[f];
+        ctx.beginPath();
+        ctx.moveTo(lhX + Math.cos(ang) * 12, lhY + 12 + Math.sin(ang) * 12);
+        ctx.lineTo(lhX + Math.cos(ang) * fl, lhY + Math.sin(ang) * fl);
+        ctx.stroke();
+      }
+
+      if (isHoldingNow) {
+        ctx.beginPath();
+        ctx.arc(lhX, lhY, 35, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(48, 209, 88, 0.2)';
+        ctx.fill();
+      }
+
+      // Right Hand & Baton
+      const rhX = standCX + 240 + (mouse.x - cx) * 0.15;
+      const rhY = h * 0.78 + camY * 0.1;
+
+      ctx.fillStyle = '#0c0a10';
+      ctx.beginPath();
+      ctx.ellipse(rhX + 80, rhY + 110, 45, 90, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f8f8f8';
+      ctx.beginPath();
+      ctx.ellipse(rhX + 35, rhY + 55, 14, 28, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#dca686';
+      ctx.beginPath();
+      ctx.ellipse(rhX, rhY + 15, 20, 26, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#b85a30';
+      ctx.beginPath();
+      ctx.ellipse(rhX - 8, rhY - 6, 8, 18, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#c99476';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(rhX - 16, rhY - 4);
+      ctx.lineTo(rhX + 4, rhY - 14);
+      ctx.stroke();
+
+      // Crisp White Baton
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(rhX - 12, rhY - 18);
+      ctx.lineTo(mouse.x, mouse.y);
+      ctx.stroke();
+
+      // Clean Solid Baton Tip Dot (no blur/glow)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    let lastTick = performance.now();
+    function mainLoop(now) {
+      const dt = (now - lastTick) / 1000;
+      lastTick = now;
+
+      updateGame(dt);
+      render();
+
+      requestAnimationFrame(mainLoop);
+    }
+
+    // Modal & Buttons
+    btnStartGame.addEventListener('click', () => {
+      modalOverlay.classList.add('hidden');
+      resetCues();
+      startMusic();
+      game.isPlaying = true;
+    });
+
+    btnPauseToggle.addEventListener('click', () => {
+      modalOverlay.classList.remove('hidden');
+      pauseMusic();
+      game.isPlaying = false;
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Escape') {
+        modalOverlay.classList.toggle('hidden');
+        if (modalOverlay.classList.contains('hidden')) {
+          startMusic();
+          game.isPlaying = true;
+        } else {
+          pauseMusic();
+          game.isPlaying = false;
+        }
+      }
+    });
+
+    function handleResize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      setupOrchestra();
+    }
+    window.addEventListener('resize', handleResize);
+
+    handleResize();
+    requestAnimationFrame(mainLoop);
+  </script>
+</body>
+</html>
